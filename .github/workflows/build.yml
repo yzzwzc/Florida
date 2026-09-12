@@ -150,12 +150,20 @@ jobs:
         for path in ../patches/*
         do
           name=$(basename $path)
-          real=$(realpath $path)
-          echo "Apply patches in $real to frida/subprojects/$name"
+          echo "Apply patches to frida/subprojects/$name"
           cd subprojects/$name
-          git am ../../../patches/$name/*.patch
+          for p in $(ls ../../../patches/$name/*.patch | sort)
+          do
+            pn=$(basename $p)
+            if git apply --whitespace=nowarn "$p" 2>/dev/null; then
+              echo "  OK(git apply)  $pn"
+            elif patch -p1 --fuzz=3 --forward --no-backup-if-mismatch < "$p"; then
+              echo "  OK(patch fuzz) $pn"
+            else
+              echo "  FAILED to apply $pn"; exit 1
+            fi
+          done
           cd ../..
-          echo $i
         done
         cd ..
         
